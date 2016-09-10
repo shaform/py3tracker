@@ -67,8 +67,7 @@
                   })
                   return cards;
               }
-              $("#list").html(populate(response.slice(0, 50), 1));
-              $("#list2").html(populate(response.slice(50, 100), 51));
+              $("#list").html(populate(response, 1));
           };
           $.getJSON('result.json', on_success);
 
