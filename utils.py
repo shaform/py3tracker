@@ -37,7 +37,7 @@ def check_overrides(name, overrides=get_overrides()):
         return overrides[name]
 
     if name.startswith('XStatic'):
-        return True
+        return []
 
     return None
 
@@ -45,7 +45,7 @@ def check_overrides(name, overrides=get_overrides()):
 def get_cache():
     if os.path.exists(CACHE_PATH):
         with open(CACHE_PATH) as f:
-            cache = {l.strip(): True for l in f}
+            cache = {l.strip(): [] for l in f}
     else:
         cache = {}
     return cache
@@ -90,59 +90,59 @@ def get_github_packages(packages, check_python2=True):
         r'https?://github.com/([^/]+)/([A-Za-z0-9_.-]+)')
 
     for package in packages:
-        url = '{}/{}/json'.format(PYPI_URL, package['name'])
-        response = session.get(url)
-        if response.status_code == 200:
-            # check github
-            package_info = response.json()
-            home_page = package_info['info']['home_page']
-            desc = package_info['info']['description']
+        if 'github_user' not in package:
+            url = '{}/{}/json'.format(PYPI_URL, package['name'])
+            response = session.get(url)
+            if response.status_code == 200:
+                # check github
+                package_info = response.json()
+                home_page = package_info['info']['home_page']
+                desc = package_info['info']['description']
 
-            if home_page:
-                m = github_pattern.match(home_page)
-            else:
-                m = None
+                if home_page:
+                    m = github_pattern.match(home_page)
+                else:
+                    m = None
 
-            if m:
-                user, name = m.groups()
-                package['github_user'] = user
-                package['github_name'] = name
+                if m:
+                    user, name = m.groups()
+                    package['github_user'] = user
+                    package['github_name'] = name
 
-            elif desc:
-                package_name = package['name']
-                for user, name in github_pattern.findall(desc):
-                    if name == package_name:
-                        package['github_user'] = user
-                        package['github_name'] = name
-                        break
-
-            if 'github_user' in package:
-                # only keep Python 2 versions
-                if check_python2:
-                    skip = False
-                    releases = package_info['releases']
-                    for versions in releases.values():
-                        for version in versions:
-                            python_version = version['python_version']
-                            if python_version == 'py2.py3' or python_version.startswith(
-                                    '3.'):
-                                skip = True
-                                break
-                        if skip:
+                elif desc:
+                    package_name = package['name']
+                    for user, name in github_pattern.findall(desc):
+                        if name == package_name:
+                            package['github_user'] = user
+                            package['github_name'] = name
                             break
 
+        if 'github_user' in package:
+            # only keep Python 2 versions
+            if check_python2:
+                skip = False
+                releases = package_info['releases']
+                for versions in releases.values():
+                    for version in versions:
+                        python_version = version['python_version']
+                        if python_version == 'py2.py3' or python_version.startswith(
+                                '3.'):
+                            skip = True
+                            break
                     if skip:
-                        continue
+                        break
 
-                # get stars
-                user = package['github_user']
-                name = package['github_name']
-                stars = get_github_stars(user, name)
-                if stars is not None:
-                    package['stars'] = stars
-                    package['url'] = 'https://github.com/{}/{}'.format(user,
-                                                                       name)
-                    yield package
+                if skip:
+                    continue
+
+            # get stars
+            user = package['github_user']
+            name = package['github_name']
+            stars = get_github_stars(user, name)
+            if stars is not None:
+                package['stars'] = stars
+                package['url'] = 'https://github.com/{}/{}'.format(user, name)
+                yield package
 
 
 def get_py2_packages(packages):
@@ -151,19 +151,18 @@ def get_py2_packages(packages):
 
         # check if overridden as Python 3
         override_status = check_overrides(name)
-        if override_status is not None:
-            if not override_status:
-                yield package
-
-        else:
+        if override_status is None:
             # check if cached as Python 3
-            cache_status = check_cache(name)
-            if cache_status is not None:
-                if not cache_status:
-                    yield package
+            override_status = check_cache(name)
 
-            elif not caniusepython3.check(projects=[name]):
+        if override_status is None:
+            if not caniusepython3.check(projects=[name]):
                 yield package
 
             else:
                 write_cache(name)
+        elif len(override_status) == 3:
+            package['github_user'] = override_status[0]
+            package['github_name'] = override_status[1]
+            package['url'] = override_status[2]
+            yield package

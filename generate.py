@@ -18,11 +18,12 @@ import sys
 import utils
 
 
-def print_progress(done, total):
+def print_progress(done, total, msg=''):
     percent = done / total * 100
     print('\r', end='')
     k = int(percent // 5)
-    print('[{:<20s}] {}/{} ({:.1f}%)'.format('=' * k, done, total, percent),
+    print('[{:<20s}] {}/{} ({:.1f}%) {:<10.10s}'.format('=' * k, done, total,
+                                                        percent, msg),
           flush=True,
           end='')
 
@@ -39,7 +40,7 @@ def generate(outfile, num_package):
             top_py2_packages.append(package)
 
             # print progress
-            print_progress(i + 1, num_package)
+            print_progress(i + 1, num_package, package['name'])
 
         else:
             break
