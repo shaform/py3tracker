@@ -2,3 +2,4 @@ caniusepython3
 lxml
 requests
 ghp-import
+diskcache
