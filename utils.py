@@ -13,6 +13,7 @@
 """Utils to get data from PyPI, GitHub, etc."""
 
 import json
+import logging
 import re
 import xmlrpc
 
@@ -67,15 +68,17 @@ def get_github_stars(user, name):
     """
     url = '{}/{}/{}'.format(GITHUB_URL, user, name)
     response = requests.get(url)
+    stars = None
     if response.status_code == 200:
         tree = lxml.html.fromstring(response.content)
-        stars = tree.xpath('//a[@href="/{}/{}/stargazers"]/text()'.format(
-            user, name))
-        if stars:
-            return int(stars[0].strip().replace(',', ''))
-        else:
-            return None
+        regexp_ns = 'http://exslt.org/regular-expressions'
+        stars = tree.xpath('//a[re:test(@href, "/.*/.*/stargazers")]/text()',
+                           namespaces={'re': regexp_ns})
+
+    if stars:
+        return int(stars[0].strip().replace(',', ''))
     else:
+        logging.warning('cannot find stars for %s/%s', user, name)
         return None
 
 
@@ -100,12 +103,11 @@ def get_github_info(package_name, package_info):
         if matched:
             return matched.groups()
 
-    else:
-        desc = package_info['info']['description']
-        if desc:
-            for user, name in GITHUB_PATTERN.findall(desc):
-                if name == package_name:
-                    return user, name
+    desc = package_info['info']['description']
+    if desc:
+        for user, name in GITHUB_PATTERN.findall(desc):
+            if name == package_name:
+                return user, name
     return None, None
 
 
@@ -129,6 +131,8 @@ def get_github_packages(packages_with_info, cache=None):
     if cache is None:
         cache = {}
 
+    visited = set()
+
     for package, package_info in packages_with_info:
         # process only if it does not already have GitHub info
         if 'github_user' not in package:
@@ -136,13 +140,15 @@ def get_github_packages(packages_with_info, cache=None):
         else:
             user, name = package['github_user'], package['github_name']
 
-        if user and name:
+        if user and name and (user, name) not in visited:
             # store GitHub info
             url = 'https://github.com/{}/{}'.format(user, name)
             cache[package['name']] = (user, name, url)
 
             stars = get_github_stars(user, name)
             if stars is not None:
+                visited.add((user, name))
+
                 package_with_github = {
                     'name': package['name'],
                     'downloads': package['downloads'],
@@ -153,6 +159,9 @@ def get_github_packages(packages_with_info, cache=None):
                 }
 
                 yield package_with_github
+        else:
+            logging.debug('cannot find GitHub repository for %s',
+                          package['name'])
 
 
 def is_python3_enabled(package_info):
@@ -212,4 +221,5 @@ def get_py2_packages(packages, cache=None, overrides=None):
                 cache[name] = ()
                 continue
 
+            logging.debug('%s is not Python 3 enabled.', name)
             yield (package, package_info)

@@ -14,6 +14,7 @@
 
 import argparse
 import json
+import logging
 
 import utils
 
@@ -71,12 +72,22 @@ def generate(num_package, cache, overrides):
 
 def main():
     """Generate Python 2 only package list."""
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--num-package', type=int, default=100)
     parser.add_argument('-o', '--outfile', default=RESULT_PATH)
     parser.add_argument('-c', '--cache-dir', default=CACHE_PATH)
     parser.add_argument('--overrides', default=OVERRIDE_PATH)
+    parser.add_argument('-v',
+                        '--verbose',
+                        help='increase output verbosity',
+                        action='store_true')
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.WARNING)
 
     cache = utils.get_cache(args.cache_dir)
     overrides = utils.get_overrides(args.overrides)
