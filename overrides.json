@@ -1,8 +1,9 @@
 {
-  "s3cmd": ["s3tools", "s3cmd", "https://github.com/s3tools/s3cmd"],
+  "s3cmd": [],
   "slacker": [],
   "twython": [],
   "pyes": [],
   "flask-security": [],
-  "nodeenv": []
+  "nodeenv": [],
+  "letsencrypt": []
 }
