@@ -15,7 +15,6 @@
 import json
 import logging
 import re
-import xmlrpc
 
 import caniusepython3
 import diskcache
@@ -23,6 +22,7 @@ import lxml.html
 import requests
 
 PYPI_URL = 'https://pypi.python.org/pypi'
+TOP_URL = 'https://hugovk.github.io/top-pypi-packages/top-pypi-packages-365-days.min.json'
 GITHUB_URL = 'https://github.com'
 OVERRIDE_PATH = 'overrides.json'
 CACHE_PATH = 'cache.data'
@@ -72,8 +72,9 @@ def get_github_stars(user, name):
     if response.status_code == 200:
         tree = lxml.html.fromstring(response.content)
         regexp_ns = 'http://exslt.org/regular-expressions'
-        stars = tree.xpath('//a[re:test(@href, "/.*/.*/stargazers")]/text()',
-                           namespaces={'re': regexp_ns})
+        stars = tree.xpath(
+            '//a[re:test(@href, "/.*/.*/stargazers")]/text()',
+            namespaces={'re': regexp_ns})
 
     if stars:
         return int(stars[0].strip().replace(',', ''))
@@ -84,9 +85,8 @@ def get_github_stars(user, name):
 
 def get_top_packages():
     """Get top packages from PyPI"""
-    client = xmlrpc.client.ServerProxy(PYPI_URL)
-    for name, downloads in client.top_packages():
-        yield {'name': name, 'downloads': downloads}
+    for item in requests.get(TOP_URL).json()['rows']:
+        yield {'name': item['project'], 'downloads': item['download_count']}
 
 
 GITHUB_PATTERN = re.compile(r'https?://github.com/([^/]+)/([A-Za-z0-9_.-]+)')
