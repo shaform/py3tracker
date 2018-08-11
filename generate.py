@@ -32,10 +32,11 @@ def print_progress(done, total, msg=''):
     percent = done / total * 100
     print('\r', end='')
     k = int(percent // 5)
-    print('[{:<20s}] {}/{} ({:.1f}%) {:<10.10s}'.format('=' * k, done, total,
-                                                        percent, msg),
-          flush=True,
-          end='')
+    print(
+        '[{:<20s}] {}/{} ({:.1f}%) {:<10.10s}'.format('=' * k, done, total,
+                                                      percent, msg),
+        flush=True,
+        end='')
 
 
 def generate(num_package, cache, overrides):
@@ -74,14 +75,15 @@ def main():
     """Generate Python 2 only package list."""
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-n', '--num-package', type=int, default=100)
+    parser.add_argument('-n', '--num-package', type=int, default=50)
     parser.add_argument('-o', '--outfile', default=RESULT_PATH)
     parser.add_argument('-c', '--cache-dir', default=CACHE_PATH)
     parser.add_argument('--overrides', default=OVERRIDE_PATH)
-    parser.add_argument('-v',
-                        '--verbose',
-                        help='increase output verbosity',
-                        action='store_true')
+    parser.add_argument(
+        '-v',
+        '--verbose',
+        help='increase output verbosity',
+        action='store_true')
     args = parser.parse_args()
 
     if args.verbose:
@@ -91,9 +93,8 @@ def main():
 
     cache = utils.get_cache(args.cache_dir)
     overrides = utils.get_overrides(args.overrides)
-    top_py2_packages = generate(args.num_package,
-                                cache=cache,
-                                overrides=overrides)
+    top_py2_packages = generate(
+        args.num_package, cache=cache, overrides=overrides)
 
     with open(args.outfile, 'w', encoding='utf8') as out:
         json.dump(top_py2_packages, out)
